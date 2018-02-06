@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# TODO: TERMINAL_NAME should be a param
+# TODO: Support more than one terminals
+# TODO: Use class name or something more sophisticated than the window name to find the terminal windows
+# TODO: What if the terminals are overlaping?
+# TODO: More directions
+
+
+if [[ $# -ne 1 ]]; then
+	echo "You must provide exactly one argument -- the direction (left/right)"
+	exit 1
+fi
+
+
+TERMINAL_NAME='urxvt'
+direction=$1
+
+set -f              # turn off globbing
+IFS='
+'                   # split at newlines only
+
+terminals=($(wmctrl -l -G | grep "$TERMINAL_NAME"))
+
+unset IFS
+set +f
+
+if [[ "${#terminals[@]}" -ne 2 ]]; then
+	echo "There must be exactly two terminal windows"
+	exit 1
+fi
+
+active_term_id=$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)
+
+first_start_width=$(echo "${terminals[0]}" | awk '{ print $3  }')
+first_id=$(echo "${terminals[0]}" | awk '{ print $1  }')
+
+second_start_width=$(echo "${terminals[1]}" | awk '{ print $3  }')
+second_id=$(echo "${terminals[1]}" | awk '{ print $1  }')
+
+
+if [[ $first_start_width -lt $second_start_width ]]; then
+	# first is left; second is right
+
+	if [[ $first_id -eq $active_term_id ]]; then
+		if [[ $direction == 'right' ]]; then
+			wmctrl -i -a "$second_id"
+		fi
+	else
+		if [[ $direction == 'left' ]]; then
+			wmctrl -i -a "$first_id"
+		fi
+	fi
+else
+	# first is right; second is left
+
+	if [[ $first_id -eq $active_term_id ]]; then
+		if [[ $direction == 'left' ]]; then
+			wmctrl -i -a "$second_id"
+		fi
+	else
+		if [[ $direction == 'right' ]]; then
+			wmctrl -i -a "$first_id"
+		fi
+	fi
+fi
+
